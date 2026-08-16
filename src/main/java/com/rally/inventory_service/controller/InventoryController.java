@@ -8,8 +8,10 @@ import com.rally.inventory_service.repository.InventoryRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/inventory")
@@ -116,5 +118,15 @@ public class InventoryController {
         return inventoryRepository.findById(productId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<Map<String, Inventory>> getInventoryBulk(
+            @RequestBody List<UUID> productIds
+    ) {
+        List<Inventory> items = inventoryRepository.findAllById(productIds);
+        Map<String, Inventory> result = items.stream()
+                .collect(Collectors.toMap(inv -> inv.getProductId().toString(), inv -> inv));
+        return ResponseEntity.ok(result);
     }
 }
