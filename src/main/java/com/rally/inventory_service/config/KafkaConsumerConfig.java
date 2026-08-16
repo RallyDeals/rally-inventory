@@ -2,6 +2,7 @@ package com.rally.inventory_service.config;
 
 import com.rally.inventory_service.event.DealCreatedEvent;
 import com.rally.inventory_service.event.ProductCreatedEvent;
+import com.rally.inventory_service.event.ProductDeletedEvent;
 import com.rally.inventory_service.event.DealCancelledEvent;
 import com.rally.inventory_service.event.DealExpiredEvent;
 import com.rally.inventory_service.event.DealSucceededEvent;
@@ -76,6 +77,32 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         factory.setConsumerFactory(productCreatedConsumerFactory());
+
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, ProductDeletedEvent>
+    productDeletedConsumerFactory() {
+
+        JacksonJsonDeserializer<ProductDeletedEvent> deserializer =
+                new JacksonJsonDeserializer<>(ProductDeletedEvent.class);
+
+        return new DefaultKafkaConsumerFactory<>(
+                consumerProperties(),
+                new StringDeserializer(),
+                deserializer
+        );
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, ProductDeletedEvent>
+    productDeletedKafkaListenerContainerFactory() {
+
+        ConcurrentKafkaListenerContainerFactory<String, ProductDeletedEvent> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+
+        factory.setConsumerFactory(productDeletedConsumerFactory());
 
         return factory;
     }

@@ -225,4 +225,47 @@ public class InventoryServiceImpl implements InventoryService {
                         ));
     }
 
+    @Override
+    public void adjustInventory(UUID productId, Integer adjustment) {
+
+        Inventory inventory = inventoryRepository.findById(productId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Inventory not found for product: " + productId
+                        ));
+
+        int newTotal = inventory.getTotalStock() + adjustment;
+        if (newTotal < 0) {
+            throw new IllegalArgumentException(
+                    "Adjustment would result in negative stock for product: " + productId
+            );
+        }
+
+        inventory.setTotalStock(newTotal);
+        inventory.setAvailableStock(newTotal - inventory.getReservedStock());
+
+        OffsetDateTime now = OffsetDateTime.now();
+        inventory.setUpdatedAt(now);
+
+        inventoryRepository.save(inventory);
+
+        InventoryHistory history = new InventoryHistory();
+        history.setProductId(productId);
+        history.setOperationType(InventoryOperationType.UPDATE);
+        history.setQuantity(Math.abs(adjustment));
+        history.setCreatedAt(now);
+
+        historyRepository.save(history);
+    }
+
+    @Override
+    public void deleteInventory(UUID productId) {
+
+        if (!inventoryRepository.existsById(productId)) {
+            return;
+        }
+
+        inventoryRepository.deleteById(productId);
+    }
+
 }

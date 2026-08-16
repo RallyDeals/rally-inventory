@@ -10,5 +10,7 @@ public interface InventoryService {
     void releaseStock(UUID productId, Integer quantity);
     void deductStock(UUID productId, Integer quantity);
     void restock(UUID productId, Integer quantity);
+    void adjustInventory(UUID productId, Integer adjustment);
+    void deleteInventory(UUID productId);
     Inventory getInventory(UUID productId);
 }

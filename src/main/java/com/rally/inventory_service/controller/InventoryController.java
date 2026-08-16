@@ -1,10 +1,13 @@
 package com.rally.inventory_service.controller;
 import com.rally.inventory_service.entity.Inventory;
 import com.rally.inventory_service.dto.ReserveInventoryRequest;
+import com.rally.inventory_service.dto.RestockRequest;
+import com.rally.inventory_service.dto.AdjustRequest;
 import com.rally.inventory_service.service.InventoryService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -70,6 +73,39 @@ public class InventoryController {
 
         return ResponseEntity.ok().build();
     }
+
+    @PatchMapping("/{productId}/restock")
+    public ResponseEntity<Map<String, String>> restock(
+            @PathVariable UUID productId,
+            @RequestBody RestockRequest request
+    ) {
+
+        inventoryService.restock(productId, request.getQuantity());
+
+        return ResponseEntity.ok(Map.of("message", "Inventory restocked successfully."));
+    }
+
+    @PatchMapping("/{productId}/adjust")
+    public ResponseEntity<Map<String, String>> adjust(
+            @PathVariable UUID productId,
+            @RequestBody AdjustRequest request
+    ) {
+
+        inventoryService.adjustInventory(productId, request.getAdjustment());
+
+        return ResponseEntity.ok(Map.of("message", "Inventory adjusted successfully."));
+    }
+
+    @DeleteMapping("/{productId}")
+    public ResponseEntity<Void> deleteInventory(
+            @PathVariable UUID productId
+    ) {
+
+        inventoryService.deleteInventory(productId);
+
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{productId}")
     public ResponseEntity<Inventory> getInventory(
             @PathVariable UUID productId
