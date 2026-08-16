@@ -4,6 +4,7 @@ import com.rally.inventory_service.dto.ReserveInventoryRequest;
 import com.rally.inventory_service.dto.RestockRequest;
 import com.rally.inventory_service.dto.AdjustRequest;
 import com.rally.inventory_service.service.InventoryService;
+import com.rally.inventory_service.repository.InventoryRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,9 +16,11 @@ import java.util.UUID;
 public class InventoryController {
 
     private final InventoryService inventoryService;
+    private final InventoryRepository inventoryRepository;
 
-    public InventoryController(InventoryService inventoryService) {
+    public InventoryController(InventoryService inventoryService, InventoryRepository inventoryRepository) {
         this.inventoryService = inventoryService;
+        this.inventoryRepository = inventoryRepository;
     }
 
     @PostMapping("/{productId}/reserve-deal")
@@ -110,8 +113,8 @@ public class InventoryController {
     public ResponseEntity<Inventory> getInventory(
             @PathVariable UUID productId
     ) {
-        return ResponseEntity.ok(
-                inventoryService.getInventory(productId)
-        );
+        return inventoryRepository.findById(productId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }

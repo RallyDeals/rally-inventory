@@ -17,6 +17,8 @@ import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
+import org.springframework.kafka.support.mapping.DefaultJacksonJavaTypeMapper;
+import org.springframework.kafka.support.mapping.JacksonJavaTypeMapper;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -55,17 +57,22 @@ public class KafkaConsumerConfig {
         return properties;
     }
 
+    private <T> JacksonJsonDeserializer<T> createDeserializer(Class<T> targetType) {
+        JacksonJsonDeserializer<T> deserializer = new JacksonJsonDeserializer<>(targetType);
+        DefaultJacksonJavaTypeMapper typeMapper = new DefaultJacksonJavaTypeMapper();
+        typeMapper.setTypePrecedence(JacksonJavaTypeMapper.TypePrecedence.INFERRED);
+        deserializer.setTypeMapper(typeMapper);
+        return deserializer;
+    }
+
     @Bean
     public ConsumerFactory<String, ProductCreatedEvent>
     productCreatedConsumerFactory() {
 
-        JacksonJsonDeserializer<ProductCreatedEvent> deserializer =
-                new JacksonJsonDeserializer<>(ProductCreatedEvent.class);
-
         return new DefaultKafkaConsumerFactory<>(
                 consumerProperties(),
                 new StringDeserializer(),
-                deserializer
+                createDeserializer(ProductCreatedEvent.class)
         );
     }
 
@@ -85,13 +92,10 @@ public class KafkaConsumerConfig {
     public ConsumerFactory<String, ProductDeletedEvent>
     productDeletedConsumerFactory() {
 
-        JacksonJsonDeserializer<ProductDeletedEvent> deserializer =
-                new JacksonJsonDeserializer<>(ProductDeletedEvent.class);
-
         return new DefaultKafkaConsumerFactory<>(
                 consumerProperties(),
                 new StringDeserializer(),
-                deserializer
+                createDeserializer(ProductDeletedEvent.class)
         );
     }
 
@@ -111,13 +115,10 @@ public class KafkaConsumerConfig {
     public ConsumerFactory<String, DealCreatedEvent>
     dealCreatedConsumerFactory() {
 
-        JacksonJsonDeserializer<DealCreatedEvent> deserializer =
-                new JacksonJsonDeserializer<>(DealCreatedEvent.class);
-
         return new DefaultKafkaConsumerFactory<>(
                 consumerProperties(),
                 new StringDeserializer(),
-                deserializer
+                createDeserializer(DealCreatedEvent.class)
         );
     }
 
@@ -136,13 +137,10 @@ public class KafkaConsumerConfig {
     public ConsumerFactory<String, DealCancelledEvent>
     dealCancelledConsumerFactory() {
 
-        JacksonJsonDeserializer<DealCancelledEvent> deserializer =
-                new JacksonJsonDeserializer<>(DealCancelledEvent.class);
-
         return new DefaultKafkaConsumerFactory<>(
                 consumerProperties(),
                 new StringDeserializer(),
-                deserializer
+                createDeserializer(DealCancelledEvent.class)
         );
     }
 
@@ -161,13 +159,10 @@ public class KafkaConsumerConfig {
     public ConsumerFactory<String, DealExpiredEvent>
     dealExpiredConsumerFactory() {
 
-        JacksonJsonDeserializer<DealExpiredEvent> deserializer =
-                new JacksonJsonDeserializer<>(DealExpiredEvent.class);
-
         return new DefaultKafkaConsumerFactory<>(
                 consumerProperties(),
                 new StringDeserializer(),
-                deserializer
+                createDeserializer(DealExpiredEvent.class)
         );
     }
 
@@ -186,13 +181,10 @@ public class KafkaConsumerConfig {
     public ConsumerFactory<String, DealSucceededEvent>
     dealSucceededConsumerFactory() {
 
-        JacksonJsonDeserializer<DealSucceededEvent> deserializer =
-                new JacksonJsonDeserializer<>(DealSucceededEvent.class);
-
         return new DefaultKafkaConsumerFactory<>(
                 consumerProperties(),
                 new StringDeserializer(),
-                deserializer
+                createDeserializer(DealSucceededEvent.class)
         );
     }
 
@@ -212,13 +204,10 @@ public class KafkaConsumerConfig {
     public ConsumerFactory<String, OrderCompletedEvent>
     orderCompletedConsumerFactory() {
 
-        JacksonJsonDeserializer<OrderCompletedEvent> deserializer =
-                new JacksonJsonDeserializer<>(OrderCompletedEvent.class);
-
         return new DefaultKafkaConsumerFactory<>(
                 consumerProperties(),
                 new StringDeserializer(),
-                deserializer
+                createDeserializer(OrderCompletedEvent.class)
         );
     }
     @Bean
@@ -236,13 +225,10 @@ public class KafkaConsumerConfig {
     public ConsumerFactory<String, OrderCancelledEvent>
     orderCancelledConsumerFactory() {
 
-        JacksonJsonDeserializer<OrderCancelledEvent> deserializer =
-                new JacksonJsonDeserializer<>(OrderCancelledEvent.class);
-
         return new DefaultKafkaConsumerFactory<>(
                 consumerProperties(),
                 new StringDeserializer(),
-                deserializer
+                createDeserializer(OrderCancelledEvent.class)
         );
     }
     @Bean
