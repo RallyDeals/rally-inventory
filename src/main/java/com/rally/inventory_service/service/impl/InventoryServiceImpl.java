@@ -265,7 +265,15 @@ public class InventoryServiceImpl implements InventoryService {
             return;
         }
 
-        inventoryRepository.deleteById(productId);
+        OffsetDateTime now = OffsetDateTime.now();
+
+        InventoryHistory history = new InventoryHistory();
+        history.setProductId(productId);
+        history.setOperationType(InventoryOperationType.DELETE);
+        history.setQuantity(0);
+        history.setCreatedAt(now);
+
+        historyRepository.save(history);
     }
 
 }
