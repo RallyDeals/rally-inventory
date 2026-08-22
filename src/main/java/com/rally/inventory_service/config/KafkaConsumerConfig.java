@@ -8,6 +8,7 @@ import com.rally.inventory_service.event.DealExpiredEvent;
 import com.rally.inventory_service.event.DealSucceededEvent;
 import com.rally.inventory_service.event.OrderCompletedEvent;
 import com.rally.inventory_service.event.OrderCancelledEvent;
+import com.rally.inventory_service.event.OrderNormalCancelledEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -239,6 +240,29 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         factory.setConsumerFactory(orderCancelledConsumerFactory());
+
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, OrderNormalCancelledEvent>
+    orderNormalCancelledConsumerFactory() {
+
+        return new DefaultKafkaConsumerFactory<>(
+                consumerProperties(),
+                new StringDeserializer(),
+                createDeserializer(OrderNormalCancelledEvent.class)
+        );
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, OrderNormalCancelledEvent>
+    orderNormalCancelledKafkaListenerContainerFactory() {
+
+        ConcurrentKafkaListenerContainerFactory<String, OrderNormalCancelledEvent> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+
+        factory.setConsumerFactory(orderNormalCancelledConsumerFactory());
 
         return factory;
     }

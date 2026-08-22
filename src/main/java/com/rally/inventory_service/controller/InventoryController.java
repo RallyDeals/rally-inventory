@@ -1,5 +1,7 @@
 package com.rally.inventory_service.controller;
 import com.rally.inventory_service.entity.Inventory;
+import com.rally.inventory_service.dto.OrderReserveRequest;
+import com.rally.inventory_service.dto.OrderReserveResponse;
 import com.rally.inventory_service.dto.ReserveInventoryRequest;
 import com.rally.inventory_service.dto.RestockRequest;
 import com.rally.inventory_service.dto.AdjustRequest;
@@ -77,6 +79,14 @@ public class InventoryController {
         );
 
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/order-reserve")
+    public ResponseEntity<OrderReserveResponse> reserveOrder(
+            @RequestBody OrderReserveRequest request
+    ) {
+
+        return ResponseEntity.ok(inventoryService.reserveOrder(request));
     }
 
     @PatchMapping("/{productId}/restock")
