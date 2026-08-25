@@ -1,47 +1,43 @@
 services:
-  postgres:
+  inventory-postgres:
     image: postgres:17
     container_name: inventory-postgres
-
     environment:
       POSTGRES_DB: inventory
       POSTGRES_USER: inventory_user
       POSTGRES_PASSWORD: inventory_password
-
     ports:
       - "5436:5432"
-
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory_user -d inventory"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
-  kafka:
-    image: apache/kafka:4.0.0
-    container_name: inventory-kafka
-
-    ports:
-      - "9092:9092"
-
+  inventory-service:
+    build: .
+    container_name: inventory-service
+    depends_on:
+      inventory-postgres:
+        condition: service_healthy
     environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-
-      KAFKA_NUM_PARTITIONS: 3
-
+      DB_HOST: inventory-postgres
+      DB_PORT: 5432
+      DB_NAME: inventory
+      DB_USER: inventory_user
+      DB_PASSWORD: inventory_password
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8087:8087"
     restart: unless-stopped
 
 volumes:
   postgres_data:
+
+networks:
+  default:
+    name: groupdeal-net
+    external: true
