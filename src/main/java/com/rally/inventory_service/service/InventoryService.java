@@ -20,4 +20,5 @@ public interface InventoryService {
     void adjustInventory(UUID productId, Integer adjustment);
     void deleteInventory(UUID productId);
     Inventory getInventory(UUID productId);
+    List<Inventory> getInventoryBulk(List<UUID> productIds);
 }

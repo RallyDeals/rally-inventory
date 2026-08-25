@@ -6,7 +6,6 @@ import com.rally.inventory_service.dto.ReserveInventoryRequest;
 import com.rally.inventory_service.dto.RestockRequest;
 import com.rally.inventory_service.dto.AdjustRequest;
 import com.rally.inventory_service.service.InventoryService;
-import com.rally.inventory_service.repository.InventoryRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,11 +19,9 @@ import java.util.stream.Collectors;
 public class InventoryController {
 
     private final InventoryService inventoryService;
-    private final InventoryRepository inventoryRepository;
 
-    public InventoryController(InventoryService inventoryService, InventoryRepository inventoryRepository) {
+    public InventoryController(InventoryService inventoryService) {
         this.inventoryService = inventoryService;
-        this.inventoryRepository = inventoryRepository;
     }
 
     @PostMapping("/{productId}/reserve-deal")
@@ -35,7 +32,7 @@ public class InventoryController {
 
         inventoryService.reserveStock(
                 productId,
-                request.getQuantity()
+                request == null ? null : request.getQuantity()
         );
 
         return ResponseEntity.ok().build();
@@ -49,7 +46,7 @@ public class InventoryController {
 
         inventoryService.releaseStock(
                 productId,
-                request.getQuantity()
+                request == null ? null : request.getQuantity()
         );
 
         return ResponseEntity.ok().build();
@@ -62,7 +59,7 @@ public class InventoryController {
 
         inventoryService.reserveStock(
                 productId,
-                request.getQuantity()
+                request == null ? null : request.getQuantity()
         );
 
         return ResponseEntity.ok().build();
@@ -75,7 +72,7 @@ public class InventoryController {
 
         inventoryService.releaseStock(
                 productId,
-                request.getQuantity()
+                request == null ? null : request.getQuantity()
         );
 
         return ResponseEntity.ok().build();
@@ -95,7 +92,7 @@ public class InventoryController {
             @RequestBody RestockRequest request
     ) {
 
-        inventoryService.restock(productId, request.getQuantity());
+        inventoryService.restock(productId, request == null ? null : request.getQuantity());
 
         return ResponseEntity.ok(Map.of("message", "Inventory restocked successfully."));
     }
@@ -106,7 +103,7 @@ public class InventoryController {
             @RequestBody AdjustRequest request
     ) {
 
-        inventoryService.adjustInventory(productId, request.getAdjustment());
+        inventoryService.adjustInventory(productId, request == null ? null : request.getAdjustment());
 
         return ResponseEntity.ok(Map.of("message", "Inventory adjusted successfully."));
     }
@@ -125,16 +122,14 @@ public class InventoryController {
     public ResponseEntity<Inventory> getInventory(
             @PathVariable UUID productId
     ) {
-        return inventoryRepository.findById(productId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(inventoryService.getInventory(productId));
     }
 
     @PostMapping("/bulk")
     public ResponseEntity<Map<String, Inventory>> getInventoryBulk(
             @RequestBody List<UUID> productIds
     ) {
-        List<Inventory> items = inventoryRepository.findAllById(productIds);
+        List<Inventory> items = inventoryService.getInventoryBulk(productIds);
         Map<String, Inventory> result = items.stream()
                 .collect(Collectors.toMap(inv -> inv.getProductId().toString(), inv -> inv));
         return ResponseEntity.ok(result);

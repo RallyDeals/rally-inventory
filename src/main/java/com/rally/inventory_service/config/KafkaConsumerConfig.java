@@ -5,6 +5,7 @@ import com.rally.inventory_service.event.ProductCreatedEvent;
 import com.rally.inventory_service.event.ProductDeletedEvent;
 import com.rally.inventory_service.event.DealCancelledEvent;
 import com.rally.inventory_service.event.DealExpiredEvent;
+import com.rally.inventory_service.event.DealFailedEvent;
 import com.rally.inventory_service.event.DealSucceededEvent;
 import com.rally.inventory_service.event.OrderCompletedEvent;
 import com.rally.inventory_service.event.OrderCancelledEvent;
@@ -175,6 +176,28 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         factory.setConsumerFactory(dealExpiredConsumerFactory());
+
+        return factory;
+    }
+    @Bean
+    public ConsumerFactory<String, DealFailedEvent>
+    dealFailedConsumerFactory() {
+
+        return new DefaultKafkaConsumerFactory<>(
+                consumerProperties(),
+                new StringDeserializer(),
+                createDeserializer(DealFailedEvent.class)
+        );
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, DealFailedEvent>
+    dealFailedKafkaListenerContainerFactory() {
+
+        ConcurrentKafkaListenerContainerFactory<String, DealFailedEvent> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+
+        factory.setConsumerFactory(dealFailedConsumerFactory());
 
         return factory;
     }
