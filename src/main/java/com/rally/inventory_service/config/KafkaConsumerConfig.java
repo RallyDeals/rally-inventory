@@ -201,6 +201,7 @@ public class KafkaConsumerConfig {
 
         return factory;
     }
+
     @Bean
     public ConsumerFactory<String, DealSucceededEvent>
     dealSucceededConsumerFactory() {
