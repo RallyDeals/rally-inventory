@@ -1,5 +1,10 @@
 package com.rally.inventory_service.service.impl;
 
+import com.rally.common.exceptions.domain.inventory.InsufficientStockException;
+import com.rally.common.exceptions.domain.inventory.InventoryNotFoundException;
+import com.rally.common.exceptions.shared.AlreadyExistsException;
+import com.rally.common.exceptions.shared.BadRequestException;
+import com.rally.common.exceptions.shared.ConflictException;
 import com.rally.inventory_service.dto.OrderReserveRequest;
 import com.rally.inventory_service.dto.OrderReserveResponse;
 import com.rally.inventory_service.entity.Inventory;
@@ -35,9 +40,16 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     public void createInventory(UUID productId, Integer initialStock) {
 
-        // Check if inventory already exists
+        if (productId == null) {
+            throw new BadRequestException("Product id is required");
+        }
+
+        if (initialStock == null || initialStock < 0) {
+            throw new BadRequestException("Initial stock must be zero or greater");
+        }
+
         if (inventoryRepository.existsById(productId)) {
-            throw new IllegalArgumentException(
+            throw new AlreadyExistsException(
                     "Inventory already exists for product: " + productId
             );
         }
@@ -69,21 +81,16 @@ public class InventoryServiceImpl implements InventoryService {
     public void reserveStock(UUID productId, Integer quantity) {
 
         Inventory inventory = inventoryRepository.findById(productId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Inventory not found for product: " + productId
-                        ));
+                .orElseThrow(() -> new InventoryNotFoundException(productId));
 
-        if (quantity <= 0) {
-            throw new IllegalArgumentException(
+        if (quantity == null || quantity <= 0) {
+            throw new BadRequestException(
                     "Reservation quantity must be greater than zero"
             );
         }
 
         if (inventory.getAvailableStock() < quantity) {
-            throw new IllegalStateException(
-                    "Insufficient available stock for product: " + productId
-            );
+            throw new InsufficientStockException(productId, quantity, inventory.getAvailableStock());
         }
 
         inventory.setReservedStock(
@@ -113,22 +120,22 @@ public class InventoryServiceImpl implements InventoryService {
     public OrderReserveResponse reserveOrder(OrderReserveRequest request) {
 
         if (request == null || request.getOrderId() == null) {
-            throw new IllegalArgumentException("Order id is required");
+            throw new BadRequestException("Order id is required");
         }
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
-            throw new IllegalArgumentException("At least one order item is required");
+            throw new BadRequestException("At least one order item is required");
         }
 
         Map<UUID, Integer> requestedQuantities = new LinkedHashMap<>();
 
         for (OrderReserveRequest.Item item : request.getItems()) {
             if (item.getProductId() == null) {
-                throw new IllegalArgumentException("Product id is required");
+                throw new BadRequestException("Product id is required");
             }
 
             if (item.getQuantity() == null || item.getQuantity() <= 0) {
-                throw new IllegalArgumentException(
+                throw new BadRequestException(
                         "Reservation quantity must be greater than zero for product: "
                                 + item.getProductId()
                 );
@@ -142,22 +149,28 @@ public class InventoryServiceImpl implements InventoryService {
         }
 
         Map<UUID, Inventory> inventories = new LinkedHashMap<>();
+        List<InsufficientStockException.Shortage> shortages = new ArrayList<>();
 
         for (UUID productId : requestedQuantities.keySet()) {
             Inventory inventory = inventoryRepository.findById(productId)
-                    .orElseThrow(() ->
-                            new IllegalArgumentException(
-                                    "Inventory not found for product: " + productId
-                            ));
+                    .orElseThrow(() -> new InventoryNotFoundException(productId));
 
             Integer requestedQuantity = requestedQuantities.get(productId);
             if (inventory.getAvailableStock() < requestedQuantity) {
-                throw new IllegalStateException(
-                        "Insufficient available stock for product: " + productId
+                shortages.add(
+                        new InsufficientStockException.Shortage(
+                                productId,
+                                requestedQuantity,
+                                inventory.getAvailableStock()
+                        )
                 );
             }
 
             inventories.put(productId, inventory);
+        }
+
+        if (!shortages.isEmpty()) {
+            throw new InsufficientStockException(shortages);
         }
 
         Map<UUID, Integer> availableBeforeReserve = new LinkedHashMap<>();
@@ -203,13 +216,16 @@ public class InventoryServiceImpl implements InventoryService {
     public void releaseStock(UUID productId, Integer quantity) {
 
         Inventory inventory = inventoryRepository.findById(productId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Inventory not found for product: " + productId
-                        ));
+                .orElseThrow(() -> new InventoryNotFoundException(productId));
+
+        if (quantity == null || quantity <= 0) {
+            throw new BadRequestException(
+                    "Release quantity must be greater than zero"
+            );
+        }
 
         if (inventory.getReservedStock() < quantity) {
-            throw new IllegalStateException(
+            throw new ConflictException(
                     "Cannot release more stock than currently reserved for product: "
                             + productId
             );
@@ -247,11 +263,11 @@ public class InventoryServiceImpl implements InventoryService {
         Map<UUID, Integer> quantitiesByProduct = new LinkedHashMap<>();
         for (OrderNormalCancelledEvent.Item item : items) {
             if (item.getProductId() == null) {
-                throw new IllegalArgumentException("Product id is required");
+                throw new BadRequestException("Product id is required");
             }
 
             if (item.getQuantity() == null || item.getQuantity() <= 0) {
-                throw new IllegalArgumentException(
+                throw new BadRequestException(
                         "Release quantity must be greater than zero for product: "
                                 + item.getProductId()
                 );
@@ -273,13 +289,16 @@ public class InventoryServiceImpl implements InventoryService {
     public void deductStock(UUID productId, Integer quantity) {
 
         Inventory inventory = inventoryRepository.findById(productId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Inventory not found for product: " + productId
-                        ));
+                .orElseThrow(() -> new InventoryNotFoundException(productId));
+
+        if (quantity == null || quantity <= 0) {
+            throw new BadRequestException(
+                    "Deduct quantity must be greater than zero"
+            );
+        }
 
         if (inventory.getReservedStock() < quantity) {
-            throw new IllegalStateException(
+            throw new ConflictException(
                     "Cannot deduct more stock than currently reserved for product: "
                             + productId
             );
@@ -311,13 +330,10 @@ public class InventoryServiceImpl implements InventoryService {
     public void restock(UUID productId, Integer quantity) {
 
         Inventory inventory = inventoryRepository.findById(productId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Inventory not found for product: " + productId
-                        ));
+                .orElseThrow(() -> new InventoryNotFoundException(productId));
 
-        if (quantity <= 0) {
-            throw new IllegalArgumentException(
+        if (quantity == null || quantity <= 0) {
+            throw new BadRequestException(
                     "Restock quantity must be greater than zero"
             );
         }
@@ -348,24 +364,36 @@ public class InventoryServiceImpl implements InventoryService {
     public Inventory getInventory(UUID productId) {
 
         return inventoryRepository.findById(productId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Inventory not found for product: " + productId
-                        ));
+                .orElseThrow(() -> new InventoryNotFoundException(productId));
+    }
+
+    @Override
+    public List<Inventory> getInventoryBulk(List<UUID> productIds) {
+
+        if (productIds == null || productIds.isEmpty()) {
+            throw new BadRequestException("At least one product id is required");
+        }
+
+        if (productIds.stream().anyMatch(id -> id == null)) {
+            throw new BadRequestException("Product id is required");
+        }
+
+        return inventoryRepository.findAllById(productIds);
     }
 
     @Override
     public void adjustInventory(UUID productId, Integer adjustment) {
 
         Inventory inventory = inventoryRepository.findById(productId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Inventory not found for product: " + productId
-                        ));
+                .orElseThrow(() -> new InventoryNotFoundException(productId));
+
+        if (adjustment == null) {
+            throw new BadRequestException("Adjustment is required");
+        }
 
         int newTotal = inventory.getTotalStock() + adjustment;
         if (newTotal < 0) {
-            throw new IllegalArgumentException(
+            throw new BadRequestException(
                     "Adjustment would result in negative stock for product: " + productId
             );
         }
@@ -391,7 +419,7 @@ public class InventoryServiceImpl implements InventoryService {
     public void deleteInventory(UUID productId) {
 
         if (!inventoryRepository.existsById(productId)) {
-            return;
+            throw new InventoryNotFoundException(productId);
         }
 
         OffsetDateTime now = OffsetDateTime.now();
