@@ -115,7 +115,7 @@ Flyway automatically applies SQL migrations located in `src/main/resources/db/mi
 
 ## ⚡ Event-Driven Architecture (Kafka)
 
-The service consumes events across multiple topics to react to product, deal, and order state transitions:
+The service consumes events across multiple topics to react in real time to product, deal, and order state transitions:
 
 | Topic | Event Class | Action Triggered |
 | :--- | :--- | :--- |
@@ -126,9 +126,10 @@ The service consumes events across multiple topics to react to product, deal, an
 | `deal-cancelled` | `DealCancelledEvent` | Releases reserved stock back to available (`RELEASE`) |
 | `deal-expired` | `DealExpiredEvent` | Releases reserved stock back to available (`RELEASE`) |
 | `deal-failed` | `DealFailedEvent` | Releases reserved stock back to available (`RELEASE`) |
-| `order-completed` | `OrderCompletedEvent` | Deducts reserved stock on fulfilled order (`DEDUCT`) |
-| `order-cancelled` | `OrderCancelledEvent` | Releases reserved stock on single cancellation (`RELEASE`) |
-| `Order.NormalCancelled` | `OrderNormalCancelledEvent` | Releases reserved stock for multi-item cancellations (`RELEASE`) |
+| `order.lifecycle` | `OrderCreatedEvent` | Deducts reserved stock upon order confirmation (`DEDUCT`) |
+| `order.lifecycle` | `OrderNormalCancelledEvent` | Releases reserved stock upon order cancellation / payment failure (`RELEASE`) |
+| `order-completed` | `OrderCompletedEvent` | Legacy single-product order completion (`DEDUCT`) |
+| `order-cancelled` | `OrderCancelledEvent` | Legacy single-product order cancellation (`RELEASE`) |
 
 ---
 
@@ -177,8 +178,9 @@ Base path: `/inventory` (Default Port: `8087`)
 
 ---
 
-### 3. Multi-Item Order Reservation
+### 3. Multi-Item Order Reservation (Batch Call)
 - **Endpoint**: `POST /inventory/order-reserve`
+- **Behavior**: Atomic multi-item batch check. If all items have sufficient stock, reserves the stock and returns `reserved: true`. If any item is unavailable, leaves the database completely untouched (no partial reservation) and returns `reserved: false` for the unavailable item(s) to allow Order Service to cancel the order.
 - **Request Body**:
 ```json
 {
@@ -187,11 +189,15 @@ Base path: `/inventory` (Default Port: `8087`)
     {
       "productId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
       "quantity": 2
+    },
+    {
+      "productId": "c0911222-5717-4562-b3fc-2c963f66afa6",
+      "quantity": 1
     }
   ]
 }
 ```
-- **Response**: `200 OK`
+- **Response — 200 OK (Success)**:
 ```json
 {
   "orderId": "550e8400-e29b-41d4-a716-446655440000",
@@ -200,10 +206,34 @@ Base path: `/inventory` (Default Port: `8087`)
       "productId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
       "available": 80,
       "reserved": true
+    },
+    {
+      "productId": "c0911222-5717-4562-b3fc-2c963f66afa6",
+      "available": 10,
+      "reserved": true
     }
   ]
 }
 ```
+- **Response — 200 OK (Shortage / Atomic Rollback)**:
+```json
+{
+  "orderId": "550e8400-e29b-41d4-a716-446655440000",
+  "items": [
+    {
+      "productId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "available": 80,
+      "reserved": true
+    },
+    {
+      "productId": "c0911222-5717-4562-b3fc-2c963f66afa6",
+      "available": 0,
+      "reserved": false
+    }
+  ]
+}
+```
+
 
 ---
 
