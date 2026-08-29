@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.UUID;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class OrderNormalCancelledEvent {
+public class OrderCreatedEvent {
 
     @JsonProperty("order_id")
     @JsonAlias({"order_id", "orderId"})
@@ -19,10 +19,6 @@ public class OrderNormalCancelledEvent {
     @JsonAlias({"user_id", "userId"})
     private UUID userId;
 
-    @JsonProperty("cancelReason")
-    @JsonAlias({"cancelReason", "cancel_reason"})
-    private String cancelReason;
-
     @JsonProperty("items")
     @JsonAlias("items")
     private List<Item> items;
@@ -31,11 +27,23 @@ public class OrderNormalCancelledEvent {
     @JsonAlias({"total_price", "totalPrice"})
     private BigDecimal totalPrice;
 
-    @JsonProperty("payment_error_message")
-    @JsonAlias({"payment_error_message", "paymentErrorMessage"})
-    private String paymentErrorMessage;
+    @JsonProperty("address")
+    @JsonAlias("address")
+    private String address;
 
-    public OrderNormalCancelledEvent() {
+    @JsonProperty("cancelReason")
+    @JsonAlias({"cancelReason", "cancel_reason"})
+    private String cancelReason;
+
+    public OrderCreatedEvent() {
+    }
+
+    public OrderCreatedEvent(UUID orderId, UUID userId, List<Item> items, BigDecimal totalPrice, String address) {
+        this.orderId = orderId;
+        this.userId = userId;
+        this.items = items;
+        this.totalPrice = totalPrice;
+        this.address = address;
     }
 
     public UUID getOrderId() {
@@ -54,14 +62,6 @@ public class OrderNormalCancelledEvent {
         this.userId = userId;
     }
 
-    public String getCancelReason() {
-        return cancelReason;
-    }
-
-    public void setCancelReason(String cancelReason) {
-        this.cancelReason = cancelReason;
-    }
-
     public List<Item> getItems() {
         return items;
     }
@@ -78,12 +78,20 @@ public class OrderNormalCancelledEvent {
         this.totalPrice = totalPrice;
     }
 
-    public String getPaymentErrorMessage() {
-        return paymentErrorMessage;
+    public String getAddress() {
+        return address;
     }
 
-    public void setPaymentErrorMessage(String paymentErrorMessage) {
-        this.paymentErrorMessage = paymentErrorMessage;
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getCancelReason() {
+        return cancelReason;
+    }
+
+    public void setCancelReason(String cancelReason) {
+        this.cancelReason = cancelReason;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -110,6 +118,19 @@ public class OrderNormalCancelledEvent {
         private BigDecimal unitPrice;
 
         public Item() {
+        }
+
+        public Item(UUID productId, Integer quantity) {
+            this.productId = productId;
+            this.quantity = quantity;
+        }
+
+        public Item(UUID productId, String productName, String productImageUrl, Integer quantity, BigDecimal unitPrice) {
+            this.productId = productId;
+            this.productName = productName;
+            this.productImageUrl = productImageUrl;
+            this.quantity = quantity;
+            this.unitPrice = unitPrice;
         }
 
         public UUID getProductId() {
@@ -153,4 +174,3 @@ public class OrderNormalCancelledEvent {
         }
     }
 }
-

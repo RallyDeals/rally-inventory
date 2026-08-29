@@ -10,6 +10,7 @@ import com.rally.inventory_service.dto.OrderReserveResponse;
 import com.rally.inventory_service.entity.Inventory;
 import com.rally.inventory_service.entity.InventoryHistory;
 import com.rally.inventory_service.entity.InventoryOperationType;
+import com.rally.inventory_service.event.OrderCreatedEvent;
 import com.rally.inventory_service.event.OrderNormalCancelledEvent;
 import com.rally.inventory_service.repository.InventoryHistoryRepository;
 import com.rally.inventory_service.repository.InventoryRepository;
@@ -22,6 +23,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -127,8 +129,6 @@ public class InventoryServiceImpl implements InventoryService {
             throw new BadRequestException("At least one order item is required");
         }
 
-        Map<UUID, Integer> requestedQuantities = new LinkedHashMap<>();
-
         for (OrderReserveRequest.Item item : request.getItems()) {
             if (item.getProductId() == null) {
                 throw new BadRequestException("Product id is required");
@@ -140,8 +140,11 @@ public class InventoryServiceImpl implements InventoryService {
                                 + item.getProductId()
                 );
             }
+        }
 
-            requestedQuantities.merge(
+        Map<UUID, Integer> totalRequestedPerProduct = new LinkedHashMap<>();
+        for (OrderReserveRequest.Item item : request.getItems()) {
+            totalRequestedPerProduct.merge(
                     item.getProductId(),
                     item.getQuantity(),
                     Integer::sum
@@ -149,68 +152,70 @@ public class InventoryServiceImpl implements InventoryService {
         }
 
         Map<UUID, Inventory> inventories = new LinkedHashMap<>();
-        List<InsufficientStockException.Shortage> shortages = new ArrayList<>();
+        Map<UUID, Integer> availableStockMap = new LinkedHashMap<>();
+        boolean allAvailable = true;
 
-        for (UUID productId : requestedQuantities.keySet()) {
-            Inventory inventory = inventoryRepository.findById(productId)
-                    .orElseThrow(() -> new InventoryNotFoundException(productId));
-
-            Integer requestedQuantity = requestedQuantities.get(productId);
-            if (inventory.getAvailableStock() < requestedQuantity) {
-                shortages.add(
-                        new InsufficientStockException.Shortage(
-                                productId,
-                                requestedQuantity,
-                                inventory.getAvailableStock()
-                        )
-                );
-            }
-
-            inventories.put(productId, inventory);
-        }
-
-        if (!shortages.isEmpty()) {
-            throw new InsufficientStockException(shortages);
-        }
-
-        Map<UUID, Integer> availableBeforeReserve = new LinkedHashMap<>();
-        OffsetDateTime now = OffsetDateTime.now();
-
-        for (Map.Entry<UUID, Integer> entry : requestedQuantities.entrySet()) {
+        for (Map.Entry<UUID, Integer> entry : totalRequestedPerProduct.entrySet()) {
             UUID productId = entry.getKey();
-            Integer quantity = entry.getValue();
-            Inventory inventory = inventories.get(productId);
+            Integer requestedQuantity = entry.getValue();
 
-            availableBeforeReserve.put(productId, inventory.getAvailableStock());
-
-            inventory.setReservedStock(inventory.getReservedStock() + quantity);
-            inventory.setAvailableStock(inventory.getAvailableStock() - quantity);
-            inventory.setUpdatedAt(now);
-
-            inventoryRepository.save(inventory);
-
-            InventoryHistory history = new InventoryHistory();
-            history.setProductId(productId);
-            history.setOperationType(InventoryOperationType.RESERVE);
-            history.setQuantity(quantity);
-            history.setCreatedAt(now);
-
-            historyRepository.save(history);
+            Optional<Inventory> inventoryOpt = inventoryRepository.findById(productId);
+            if (inventoryOpt.isEmpty()) {
+                allAvailable = false;
+                availableStockMap.put(productId, 0);
+            } else {
+                Inventory inventory = inventoryOpt.get();
+                inventories.put(productId, inventory);
+                availableStockMap.put(productId, inventory.getAvailableStock());
+                if (inventory.getAvailableStock() < requestedQuantity) {
+                    allAvailable = false;
+                }
+            }
         }
 
         List<OrderReserveResponse.Item> responseItems = new ArrayList<>();
         for (OrderReserveRequest.Item item : request.getItems()) {
+            UUID productId = item.getProductId();
+            int available = availableStockMap.getOrDefault(productId, 0);
+            int totalRequested = totalRequestedPerProduct.getOrDefault(productId, item.getQuantity());
+            boolean itemReserved = (inventories.containsKey(productId) && available >= totalRequested);
+
             responseItems.add(
                     new OrderReserveResponse.Item(
-                            item.getProductId(),
-                            availableBeforeReserve.get(item.getProductId()),
-                            true
+                            productId,
+                            available,
+                            itemReserved
                     )
             );
         }
 
+        if (allAvailable) {
+            OffsetDateTime now = OffsetDateTime.now();
+
+            for (Map.Entry<UUID, Integer> entry : totalRequestedPerProduct.entrySet()) {
+                UUID productId = entry.getKey();
+                Integer quantity = entry.getValue();
+                Inventory inventory = inventories.get(productId);
+
+                inventory.setReservedStock(inventory.getReservedStock() + quantity);
+                inventory.setAvailableStock(inventory.getAvailableStock() - quantity);
+                inventory.setUpdatedAt(now);
+
+                inventoryRepository.save(inventory);
+
+                InventoryHistory history = new InventoryHistory();
+                history.setProductId(productId);
+                history.setOperationType(InventoryOperationType.RESERVE);
+                history.setQuantity(quantity);
+                history.setCreatedAt(now);
+
+                historyRepository.save(history);
+            }
+        }
+
         return new OrderReserveResponse(request.getOrderId(), responseItems);
     }
+
 
     @Override
     public void releaseStock(UUID productId, Integer quantity) {
@@ -286,7 +291,40 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
+    public void deductOrderStock(List<OrderCreatedEvent.Item> items) {
+
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+
+        Map<UUID, Integer> quantitiesByProduct = new LinkedHashMap<>();
+        for (OrderCreatedEvent.Item item : items) {
+            if (item.getProductId() == null) {
+                throw new BadRequestException("Product id is required");
+            }
+
+            if (item.getQuantity() == null || item.getQuantity() <= 0) {
+                throw new BadRequestException(
+                        "Deduct quantity must be greater than zero for product: "
+                                + item.getProductId()
+                );
+            }
+
+            quantitiesByProduct.merge(
+                    item.getProductId(),
+                    item.getQuantity(),
+                    Integer::sum
+            );
+        }
+
+        for (Map.Entry<UUID, Integer> entry : quantitiesByProduct.entrySet()) {
+            deductStock(entry.getKey(), entry.getValue());
+        }
+    }
+
+    @Override
     public void deductStock(UUID productId, Integer quantity) {
+
 
         Inventory inventory = inventoryRepository.findById(productId)
                 .orElseThrow(() -> new InventoryNotFoundException(productId));

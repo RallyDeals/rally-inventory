@@ -1,11 +1,21 @@
 package com.rally.inventory_service.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 import java.util.UUID;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class OrderReserveRequest {
 
+    @JsonProperty("orderId")
+    @JsonAlias({"orderId", "order_id"})
     private UUID orderId;
+
+    @JsonProperty("items")
+    @JsonAlias("items")
     private List<Item> items;
 
     public OrderReserveRequest() {
@@ -32,9 +42,15 @@ public class OrderReserveRequest {
         this.items = items;
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Item {
 
+        @JsonProperty("productId")
+        @JsonAlias({"productId", "product_id"})
         private UUID productId;
+
+        @JsonProperty("quantity")
+        @JsonAlias("quantity")
         private Integer quantity;
 
         public Item() {
@@ -62,3 +78,4 @@ public class OrderReserveRequest {
         }
     }
 }
+

@@ -9,6 +9,7 @@ import com.rally.inventory_service.event.DealFailedEvent;
 import com.rally.inventory_service.event.DealSucceededEvent;
 import com.rally.inventory_service.event.OrderCompletedEvent;
 import com.rally.inventory_service.event.OrderCancelledEvent;
+import com.rally.inventory_service.event.OrderCreatedEvent;
 import com.rally.inventory_service.event.OrderNormalCancelledEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -290,4 +291,28 @@ public class KafkaConsumerConfig {
 
         return factory;
     }
+
+    @Bean
+    public ConsumerFactory<String, OrderCreatedEvent>
+    orderCreatedConsumerFactory() {
+
+        return new DefaultKafkaConsumerFactory<>(
+                consumerProperties(),
+                new StringDeserializer(),
+                createDeserializer(OrderCreatedEvent.class)
+        );
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, OrderCreatedEvent>
+    orderCreatedKafkaListenerContainerFactory() {
+
+        ConcurrentKafkaListenerContainerFactory<String, OrderCreatedEvent> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+
+        factory.setConsumerFactory(orderCreatedConsumerFactory());
+
+        return factory;
+    }
 }
+
