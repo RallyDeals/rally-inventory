@@ -5,6 +5,7 @@ import com.rally.common.exceptions.domain.inventory.InventoryNotFoundException;
 import com.rally.common.exceptions.shared.AlreadyExistsException;
 import com.rally.common.exceptions.shared.BadRequestException;
 import com.rally.common.exceptions.shared.ConflictException;
+import com.rally.inventory_service.dto.DealReserveResponse;
 import com.rally.inventory_service.dto.OrderReserveRequest;
 import com.rally.inventory_service.dto.OrderReserveResponse;
 import com.rally.inventory_service.entity.Inventory;
@@ -80,19 +81,19 @@ public class InventoryServiceImpl implements InventoryService {
 
 
     @Override
-    public void reserveStock(UUID productId, Integer quantity) {
+    public DealReserveResponse reserveStock(UUID productId, Integer quantity) {
 
-        Inventory inventory = inventoryRepository.findById(productId)
-                .orElseThrow(() -> new InventoryNotFoundException(productId));
+        Inventory inventory = inventoryRepository.findById(productId).orElse(null);
+        if (inventory == null) {
+            return DealReserveResponse.notFound();
+        }
 
-        if (quantity == null || quantity <= 0) {
-            throw new BadRequestException(
-                    "Reservation quantity must be greater than zero"
-            );
+        if (quantity <= 0) {
+            return new DealReserveResponse(false, "INVALID_QUANTITY", inventory.getAvailableStock());
         }
 
         if (inventory.getAvailableStock() < quantity) {
-            throw new InsufficientStockException(productId, quantity, inventory.getAvailableStock());
+            return DealReserveResponse.insufficientStock(inventory.getAvailableStock());
         }
 
         inventory.setReservedStock(
@@ -116,6 +117,8 @@ public class InventoryServiceImpl implements InventoryService {
         history.setCreatedAt(now);
 
         historyRepository.save(history);
+
+        return DealReserveResponse.ok();
     }
 
     @Override

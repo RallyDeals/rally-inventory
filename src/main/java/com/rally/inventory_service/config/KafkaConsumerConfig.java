@@ -1,12 +1,8 @@
 package com.rally.inventory_service.config;
 
-import com.rally.inventory_service.event.DealCreatedEvent;
+import com.rally.inventory_service.event.DealEvent;
 import com.rally.inventory_service.event.ProductCreatedEvent;
 import com.rally.inventory_service.event.ProductDeletedEvent;
-import com.rally.inventory_service.event.DealCancelledEvent;
-import com.rally.inventory_service.event.DealExpiredEvent;
-import com.rally.inventory_service.event.DealFailedEvent;
-import com.rally.inventory_service.event.DealSucceededEvent;
 import com.rally.inventory_service.event.OrderCompletedEvent;
 import com.rally.inventory_service.event.OrderCancelledEvent;
 import com.rally.inventory_service.event.OrderCreatedEvent;
@@ -115,113 +111,24 @@ public class KafkaConsumerConfig {
     }
 
     @Bean
-    public ConsumerFactory<String, DealCreatedEvent>
-    dealCreatedConsumerFactory() {
+    public ConsumerFactory<String, DealEvent>
+    dealEventConsumerFactory() {
 
         return new DefaultKafkaConsumerFactory<>(
                 consumerProperties(),
                 new StringDeserializer(),
-                createDeserializer(DealCreatedEvent.class)
+                createDeserializer(DealEvent.class)
         );
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, DealCreatedEvent>
-    dealCreatedKafkaListenerContainerFactory() {
+    public ConcurrentKafkaListenerContainerFactory<String, DealEvent>
+    dealEventKafkaListenerContainerFactory() {
 
-        ConcurrentKafkaListenerContainerFactory<String, DealCreatedEvent> factory =
+        ConcurrentKafkaListenerContainerFactory<String, DealEvent> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
 
-        factory.setConsumerFactory(dealCreatedConsumerFactory());
-
-        return factory;
-    }
-    @Bean
-    public ConsumerFactory<String, DealCancelledEvent>
-    dealCancelledConsumerFactory() {
-
-        return new DefaultKafkaConsumerFactory<>(
-                consumerProperties(),
-                new StringDeserializer(),
-                createDeserializer(DealCancelledEvent.class)
-        );
-    }
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, DealCancelledEvent>
-    dealCancelledKafkaListenerContainerFactory() {
-
-        ConcurrentKafkaListenerContainerFactory<String, DealCancelledEvent> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-
-        factory.setConsumerFactory(dealCancelledConsumerFactory());
-
-        return factory;
-    }
-    @Bean
-    public ConsumerFactory<String, DealExpiredEvent>
-    dealExpiredConsumerFactory() {
-
-        return new DefaultKafkaConsumerFactory<>(
-                consumerProperties(),
-                new StringDeserializer(),
-                createDeserializer(DealExpiredEvent.class)
-        );
-    }
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, DealExpiredEvent>
-    dealExpiredKafkaListenerContainerFactory() {
-
-        ConcurrentKafkaListenerContainerFactory<String, DealExpiredEvent> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-
-        factory.setConsumerFactory(dealExpiredConsumerFactory());
-
-        return factory;
-    }
-    @Bean
-    public ConsumerFactory<String, DealFailedEvent>
-    dealFailedConsumerFactory() {
-
-        return new DefaultKafkaConsumerFactory<>(
-                consumerProperties(),
-                new StringDeserializer(),
-                createDeserializer(DealFailedEvent.class)
-        );
-    }
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, DealFailedEvent>
-    dealFailedKafkaListenerContainerFactory() {
-
-        ConcurrentKafkaListenerContainerFactory<String, DealFailedEvent> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-
-        factory.setConsumerFactory(dealFailedConsumerFactory());
-
-        return factory;
-    }
-
-    @Bean
-    public ConsumerFactory<String, DealSucceededEvent>
-    dealSucceededConsumerFactory() {
-
-        return new DefaultKafkaConsumerFactory<>(
-                consumerProperties(),
-                new StringDeserializer(),
-                createDeserializer(DealSucceededEvent.class)
-        );
-    }
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, DealSucceededEvent>
-    dealSucceededKafkaListenerContainerFactory() {
-
-        ConcurrentKafkaListenerContainerFactory<String, DealSucceededEvent> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-
-        factory.setConsumerFactory(dealSucceededConsumerFactory());
+        factory.setConsumerFactory(dealEventConsumerFactory());
 
         return factory;
     }
@@ -236,6 +143,7 @@ public class KafkaConsumerConfig {
                 createDeserializer(OrderCompletedEvent.class)
         );
     }
+
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, OrderCompletedEvent>
     orderCompletedKafkaListenerContainerFactory() {
@@ -247,6 +155,7 @@ public class KafkaConsumerConfig {
 
         return factory;
     }
+
     @Bean
     public ConsumerFactory<String, OrderCancelledEvent>
     orderCancelledConsumerFactory() {
@@ -257,6 +166,7 @@ public class KafkaConsumerConfig {
                 createDeserializer(OrderCancelledEvent.class)
         );
     }
+
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, OrderCancelledEvent>
     orderCancelledKafkaListenerContainerFactory() {
@@ -315,4 +225,3 @@ public class KafkaConsumerConfig {
         return factory;
     }
 }
-

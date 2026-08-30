@@ -1,4 +1,5 @@
 package com.rally.inventory_service.controller;
+import com.rally.inventory_service.dto.DealReserveResponse;
 import com.rally.inventory_service.entity.Inventory;
 import com.rally.inventory_service.dto.OrderReserveRequest;
 import com.rally.inventory_service.dto.OrderReserveResponse;
@@ -25,17 +26,15 @@ public class InventoryController {
     }
 
     @PostMapping("/{productId}/reserve-deal")
-    public ResponseEntity<Void> reserveDeal(
+    public ResponseEntity<DealReserveResponse> reserveDeal(
             @PathVariable UUID productId,
             @RequestBody ReserveInventoryRequest request
     ) {
-
-        inventoryService.reserveStock(
+        DealReserveResponse result = inventoryService.reserveStock(
                 productId,
                 request == null ? null : request.getQuantity()
         );
-
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/{productId}/release-deal")
@@ -52,17 +51,15 @@ public class InventoryController {
         return ResponseEntity.ok().build();
     }
     @PostMapping("/{productId}/reserve-order")
-    public ResponseEntity<Void> reserveOrder(
+    public ResponseEntity<DealReserveResponse> reserveOrder(
             @PathVariable UUID productId,
             @RequestBody ReserveInventoryRequest request
     ) {
-
-        inventoryService.reserveStock(
+        DealReserveResponse result = inventoryService.reserveStock(
                 productId,
                 request == null ? null : request.getQuantity()
         );
-
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(result);
     }
     @PostMapping("/{productId}/release-order")
     public ResponseEntity<Void> releaseOrder(

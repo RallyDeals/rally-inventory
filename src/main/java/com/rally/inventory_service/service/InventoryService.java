@@ -1,8 +1,9 @@
 package com.rally.inventory_service.service;
 
-import com.rally.inventory_service.entity.Inventory;
+import com.rally.inventory_service.dto.DealReserveResponse;
 import com.rally.inventory_service.dto.OrderReserveRequest;
 import com.rally.inventory_service.dto.OrderReserveResponse;
+import com.rally.inventory_service.entity.Inventory;
 import com.rally.inventory_service.event.OrderCreatedEvent;
 import com.rally.inventory_service.event.OrderNormalCancelledEvent;
 
@@ -12,7 +13,7 @@ import java.util.UUID;
 public interface InventoryService {
 
     void createInventory(UUID productId, Integer initialStock);
-    void reserveStock(UUID productId, Integer quantity);
+    DealReserveResponse reserveStock(UUID productId, Integer quantity);
     OrderReserveResponse reserveOrder(OrderReserveRequest request);
     void releaseStock(UUID productId, Integer quantity);
     void releaseOrderStock(List<OrderNormalCancelledEvent.Item> items);
