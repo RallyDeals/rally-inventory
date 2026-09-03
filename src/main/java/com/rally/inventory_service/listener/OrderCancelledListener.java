@@ -15,7 +15,7 @@ public class OrderCancelledListener {
     }
 
     @KafkaListener(
-            topics = "order-cancelled",
+            topics = "order.lifecycle_events",
             groupId = "inventory-service",
             containerFactory = "orderCancelledKafkaListenerContainerFactory"
     )
