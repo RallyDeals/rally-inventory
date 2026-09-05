@@ -99,7 +99,8 @@ public class InventoryServiceImpl implements InventoryService {
             return DealReserveResponse.notFound();
         }
 
-        if (quantity <= 0) {
+
+        if (quantity == null || quantity <= 0) {
             log.warn("reserveStock rejected for product={}: invalid quantity={}", productId, quantity);
             return new DealReserveResponse(false, "INVALID_QUANTITY", inventory.getAvailableStock());
         }
