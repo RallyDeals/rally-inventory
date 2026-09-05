@@ -171,6 +171,20 @@ class InventoryServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should return INVALID_QUANTITY response when quantity is null")
+        void shouldReturnInvalidQuantityWhenQuantityIsNull() {
+            when(inventoryRepository.findById(productId)).thenReturn(Optional.of(sampleInventory));
+
+            DealReserveResponse response = inventoryService.reserveStock(productId, null);
+
+            assertThat(response.isSuccess()).isFalse();
+            assertThat(response.getReason()).isEqualTo("INVALID_QUANTITY");
+            assertThat(response.getAvailableStock()).isEqualTo(80);
+            verify(inventoryRepository, never()).save(any());
+            verifyNoInteractions(historyRepository);
+        }
+
+        @Test
         @DisplayName("Should return INSUFFICIENT_STOCK response when requested > available")
         void shouldReturnInsufficientStockWhenNotEnough() {
             when(inventoryRepository.findById(productId)).thenReturn(Optional.of(sampleInventory));
@@ -407,6 +421,12 @@ class InventoryServiceImplTest {
 
             assertThat(sampleInventory.getReservedStock()).isEqualTo(10);
             assertThat(sampleInventory.getAvailableStock()).isEqualTo(90);
+            verify(inventoryRepository).save(sampleInventory);
+
+            ArgumentCaptor<InventoryHistory> histCaptor = ArgumentCaptor.forClass(InventoryHistory.class);
+            verify(historyRepository).save(histCaptor.capture());
+            assertThat(histCaptor.getValue().getOperationType()).isEqualTo(InventoryOperationType.RELEASE);
+            assertThat(histCaptor.getValue().getQuantity()).isEqualTo(10);
         }
 
         @Test
@@ -427,6 +447,8 @@ class InventoryServiceImplTest {
             List<OrderNormalCancelledEvent.Item> negativeQtyItems = List.of(createItem(productId, -1));
             assertThatThrownBy(() -> inventoryService.releaseOrderStock(negativeQtyItems))
                     .isInstanceOf(BadRequestException.class);
+
+            verifyNoInteractions(inventoryRepository, historyRepository);
         }
     }
 
@@ -502,6 +524,12 @@ class InventoryServiceImplTest {
 
             assertThat(sampleInventory.getTotalStock()).isEqualTo(90);
             assertThat(sampleInventory.getReservedStock()).isEqualTo(10);
+            verify(inventoryRepository).save(sampleInventory);
+
+            ArgumentCaptor<InventoryHistory> histCaptor = ArgumentCaptor.forClass(InventoryHistory.class);
+            verify(historyRepository).save(histCaptor.capture());
+            assertThat(histCaptor.getValue().getOperationType()).isEqualTo(InventoryOperationType.DEDUCT);
+            assertThat(histCaptor.getValue().getQuantity()).isEqualTo(10);
         }
 
         @Test
@@ -522,6 +550,8 @@ class InventoryServiceImplTest {
             List<OrderCreatedEvent.Item> negativeQtyItems = List.of(new OrderCreatedEvent.Item(productId, -1));
             assertThatThrownBy(() -> inventoryService.deductOrderStock(negativeQtyItems))
                     .isInstanceOf(BadRequestException.class);
+
+            verifyNoInteractions(inventoryRepository, historyRepository);
         }
     }
 
