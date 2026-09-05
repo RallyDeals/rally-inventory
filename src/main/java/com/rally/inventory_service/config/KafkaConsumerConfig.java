@@ -3,21 +3,19 @@ package com.rally.inventory_service.config;
 import com.rally.inventory_service.event.DealEvent;
 import com.rally.inventory_service.event.ProductCreatedEvent;
 import com.rally.inventory_service.event.ProductDeletedEvent;
-import com.rally.inventory_service.event.OrderCompletedEvent;
-import com.rally.inventory_service.event.OrderCancelledEvent;
-import com.rally.inventory_service.event.OrderCreatedEvent;
-import com.rally.inventory_service.event.OrderNormalCancelledEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
-import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.mapping.DefaultJacksonJavaTypeMapper;
 import org.springframework.kafka.support.mapping.JacksonJavaTypeMapper;
+import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
+import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -134,94 +132,25 @@ public class KafkaConsumerConfig {
     }
 
     @Bean
-    public ConsumerFactory<String, OrderCompletedEvent>
-    orderCompletedConsumerFactory() {
+    public ConsumerFactory<String, Object> orderLifecycleConsumerFactory() {
+        Map<String, Object> props = consumerProperties();
+        props.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, HeaderTypeDeserializer.class);
 
         return new DefaultKafkaConsumerFactory<>(
-                consumerProperties(),
+                props,
                 new StringDeserializer(),
-                createDeserializer(OrderCompletedEvent.class)
+                new ErrorHandlingDeserializer<>(new HeaderTypeDeserializer())
         );
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, OrderCompletedEvent>
-    orderCompletedKafkaListenerContainerFactory() {
-
-        ConcurrentKafkaListenerContainerFactory<String, OrderCompletedEvent> factory =
+    public ConcurrentKafkaListenerContainerFactory<String, Object> orderLifecycleKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, Object> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
-
-        factory.setConsumerFactory(orderCompletedConsumerFactory());
-
-        return factory;
-    }
-
-    @Bean
-    public ConsumerFactory<String, OrderCancelledEvent>
-    orderCancelledConsumerFactory() {
-
-        return new DefaultKafkaConsumerFactory<>(
-                consumerProperties(),
-                new StringDeserializer(),
-                createDeserializer(OrderCancelledEvent.class)
-        );
-    }
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, OrderCancelledEvent>
-    orderCancelledKafkaListenerContainerFactory() {
-
-        ConcurrentKafkaListenerContainerFactory<String, OrderCancelledEvent> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-
-        factory.setConsumerFactory(orderCancelledConsumerFactory());
-
-        return factory;
-    }
-
-    @Bean
-    public ConsumerFactory<String, OrderNormalCancelledEvent>
-    orderNormalCancelledConsumerFactory() {
-
-        return new DefaultKafkaConsumerFactory<>(
-                consumerProperties(),
-                new StringDeserializer(),
-                createDeserializer(OrderNormalCancelledEvent.class)
-        );
-    }
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, OrderNormalCancelledEvent>
-    orderNormalCancelledKafkaListenerContainerFactory() {
-
-        ConcurrentKafkaListenerContainerFactory<String, OrderNormalCancelledEvent> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-
-        factory.setConsumerFactory(orderNormalCancelledConsumerFactory());
-
-        return factory;
-    }
-
-    @Bean
-    public ConsumerFactory<String, OrderCreatedEvent>
-    orderCreatedConsumerFactory() {
-
-        return new DefaultKafkaConsumerFactory<>(
-                consumerProperties(),
-                new StringDeserializer(),
-                createDeserializer(OrderCreatedEvent.class)
-        );
-    }
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, OrderCreatedEvent>
-    orderCreatedKafkaListenerContainerFactory() {
-
-        ConcurrentKafkaListenerContainerFactory<String, OrderCreatedEvent> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-
-        factory.setConsumerFactory(orderCreatedConsumerFactory());
-
+        factory.setConsumerFactory(orderLifecycleConsumerFactory());
+        factory.setCommonErrorHandler(new DefaultErrorHandler(
+                (record, exception) -> System.err.println("Skipping bad record: " + record + " — " + exception.getMessage())
+        ));
         return factory;
     }
 }
