@@ -32,6 +32,9 @@ public class KafkaConsumerConfig {
     @Value("${spring.kafka.consumer.auto-offset-reset}")
     private String autoOffsetReset;
 
+    @Value("${spring.kafka.listener.observation-enabled:false}")
+    private boolean observationEnabled;
+
     private Map<String, Object> consumerProperties() {
 
         Map<String, Object> properties = new HashMap<>();
@@ -81,6 +84,7 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         factory.setConsumerFactory(productCreatedConsumerFactory());
+        factory.getContainerProperties().setObservationEnabled(observationEnabled);
 
         return factory;
     }
@@ -104,6 +108,7 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         factory.setConsumerFactory(productDeletedConsumerFactory());
+        factory.getContainerProperties().setObservationEnabled(observationEnabled);
 
         return factory;
     }
@@ -127,6 +132,7 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         factory.setConsumerFactory(dealEventConsumerFactory());
+        factory.getContainerProperties().setObservationEnabled(observationEnabled);
 
         return factory;
     }
@@ -148,6 +154,7 @@ public class KafkaConsumerConfig {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(orderLifecycleConsumerFactory());
+        factory.getContainerProperties().setObservationEnabled(observationEnabled);
         factory.setCommonErrorHandler(new DefaultErrorHandler(
                 (record, exception) -> System.err.println("Skipping bad record: " + record + " — " + exception.getMessage())
         ));

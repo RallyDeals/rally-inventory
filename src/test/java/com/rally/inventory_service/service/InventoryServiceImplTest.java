@@ -10,8 +10,8 @@ import com.rally.inventory_service.dto.OrderReserveResponse;
 import com.rally.inventory_service.entity.Inventory;
 import com.rally.inventory_service.entity.InventoryHistory;
 import com.rally.inventory_service.entity.InventoryOperationType;
+import com.rally.inventory_service.event.OrderCancelledEvent;
 import com.rally.inventory_service.event.OrderCreatedEvent;
-import com.rally.inventory_service.event.OrderNormalCancelledEvent;
 import com.rally.inventory_service.repository.InventoryHistoryRepository;
 import com.rally.inventory_service.repository.InventoryRepository;
 import com.rally.inventory_service.service.impl.InventoryServiceImpl;
@@ -400,8 +400,8 @@ class InventoryServiceImplTest {
     @DisplayName("releaseOrderStock tests")
     class ReleaseOrderStockTests {
 
-        private OrderNormalCancelledEvent.Item createItem(UUID productId, Integer quantity) {
-            OrderNormalCancelledEvent.Item item = new OrderNormalCancelledEvent.Item();
+        private OrderCancelledEvent.Item createItem(UUID productId, Integer quantity) {
+            OrderCancelledEvent.Item item = new OrderCancelledEvent.Item();
             item.setProductId(productId);
             item.setQuantity(quantity);
             return item;
@@ -412,7 +412,7 @@ class InventoryServiceImplTest {
         void shouldReleaseOrderStockSuccessfully() {
             when(inventoryRepository.findById(productId)).thenReturn(Optional.of(sampleInventory));
 
-            List<OrderNormalCancelledEvent.Item> items = List.of(
+            List<OrderCancelledEvent.Item> items = List.of(
                     createItem(productId, 5),
                     createItem(productId, 5)
             );
@@ -440,11 +440,11 @@ class InventoryServiceImplTest {
         @Test
         @DisplayName("Should throw BadRequestException on invalid items")
         void shouldThrowOnInvalidItemInList() {
-            List<OrderNormalCancelledEvent.Item> nullIdItems = List.of(createItem(null, 5));
+            List<OrderCancelledEvent.Item> nullIdItems = List.of(createItem(null, 5));
             assertThatThrownBy(() -> inventoryService.releaseOrderStock(nullIdItems))
                     .isInstanceOf(BadRequestException.class);
 
-            List<OrderNormalCancelledEvent.Item> negativeQtyItems = List.of(createItem(productId, -1));
+            List<OrderCancelledEvent.Item> negativeQtyItems = List.of(createItem(productId, -1));
             assertThatThrownBy(() -> inventoryService.releaseOrderStock(negativeQtyItems))
                     .isInstanceOf(BadRequestException.class);
 
